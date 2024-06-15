@@ -1,0 +1,35 @@
+name: analytics_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - numpy
+  - scipy
+  - statsmodels
+  - matplotlib
+  - scikit-image
+  - tensorflow=2.15.0  # Installed from Conda
+  - pip
+  - pip:
+      - .
+      - nibabel
+      - tqdm
+      - nilearn
+      - networkx
+      - mne
+      - vispy
+      - statsmodels
+      - PyOpenGL
+      - PyQt5
+      - pyqtgraph 
+      - opencv-python
+      - SimpleITK
+      - scikit-image
+      - antspyx
+      - dipy
+      - fury
+      - pyemd
+      - PyQt6
+      - scikit-tda
+      - python-louvain

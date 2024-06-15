@@ -1,0 +1,512 @@
+{
+    "S001": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S002": {
+        "V3": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S003": {
+        "V3": {
+            "progress": 3
+        }
+    },
+    "S004": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S005": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S006": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S007": {
+        "V1": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S008": {
+        "V3": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S009": {
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S010": {
+        "V1": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S011": {
+        "V1": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S012": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S013": {
+        "V2": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S014": {
+        "V2": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S015": {
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S016": {
+        "V1": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S017": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S018": {
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S019": {
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S021": {
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S022": {
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S023": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S024": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S026": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S028": {
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S029": {
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S030": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S031": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S032": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S033": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S034": {
+        "V2": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S036": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S038": {
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S039": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S041": {
+        "V2": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S042": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S043": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S044": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S045": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S046": {
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S047": {
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S048": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S049": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S050": {
+        "V1": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S051": {
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S053": {
+        "V2": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S054": {
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S055": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S056": {
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S057": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S058": {
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S059": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S060": {
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        }
+    },
+    "S061": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S062": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S063": {
+        "V1": {
+            "progress": 3
+        }
+    },
+    "S064": {
+        "V1": {
+            "progress": 3
+        },
+        "V2": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S066": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": 3
+        },
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S067": {
+        "V2": {
+            "progress": 3
+        },
+        "V1": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    },
+    "S068": {
+        "V3": {
+            "progress": "Error: No DWI or ANAT data found"
+        },
+        "V1": {
+            "progress": "Error: No DWI or ANAT data found"
+        }
+    }
+}

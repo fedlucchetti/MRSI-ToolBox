@@ -25,8 +25,10 @@ class DataUtils(object):
         self.DEVPATH        = join(self.ROOTPATH,"Dev")
         self.DEVANALYSEPATH = join(self.ROOTPATH,"Dev","MRSI-ToolBox")
         self.RECONPATH      = join(self.DEVPATH,"CreateMaps","MRSI_Recon_3D_V3")
-        self.ANARESULTSPATH = join(self.DEVPATH,"Analytics","results")
-        self.ANALOGPATH     = join(self.DEVPATH,"Analytics","logs")
+        self.ANARESULTSPATH = join(self.DEVPATH,"MRSI-ToolBox","results")
+        self.ANALOGPATH     = join(self.DEVPATH,"MRSI-ToolBox","logs")
+        self.BIDS_STRUCTURE_PATH = join(self.DEVANALYSEPATH,"bids","structure.json")
+
         os.makedirs(self.ANALOGPATH ,exist_ok=True)
         self.SAFEDRIVE      = join("/media","veracrypt2")
         self.DATAPATH       = join(self.SAFEDRIVE,"Connectome","Data")

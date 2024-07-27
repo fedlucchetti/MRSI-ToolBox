@@ -5,7 +5,7 @@ from os.path import join, split
 import os , math
 import matplotlib.pyplot as plt
 from tools.filetools import FileTools
-from graphplot.simmatrix import SimMatrix
+from graphplot.simmatrix import SimMatrixPlot
 from bids.mridata import MRIData
 from scipy.stats import norm
 import networkx as nx
@@ -25,7 +25,7 @@ from scipy.stats import chi2_contingency
 dutils = DataUtils()
 resultdir = join(dutils.ANARESULTSPATH,"connectomes_M_vs_S")
 GROUP    = "Mindfulness-Project"
-simplt   = SimMatrix()
+simplt   = SimMatrixPlot()
 ftools   = FileTools(GROUP)
 debug    = Debug()
 nettools = NetTools()

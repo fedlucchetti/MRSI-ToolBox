@@ -9,9 +9,9 @@ read -p "Enter your choice (1/2/3): " choice
 case $choice in
     1)
         echo "Checking if the environment already exists..."
-        if conda env list | grep -q 'analytics_env'; then
-            echo "Environment 'analytics_env' already exists. Removing it..."
-            conda env remove -n analytics_env
+        if conda env list | grep -q 'mrsitool_env'; then
+            echo "Environment 'mrsitool_env' already exists. Removing it..."
+            conda env remove -n mrsitool_env
         fi
         echo "Creating a new environment..."
         if conda env create -f environment.yaml; then

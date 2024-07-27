@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 import powerlaw  # You may need to install this package
 from graphplot import circular as circplt
-from graphplot.simmatrix import SimMatrix
+from graphplot.simmatrix import SimMatrixPlot
 # from tqdm import tqdm
 from registration.registration import Registration
 from registration.tools import RegTools
@@ -45,7 +45,7 @@ reg    = Registration()
 pb     = ProgressBar()
 # pltsl  = PlotSlices()
 parc   = Parcellate()
-pltsim = SimMatrix()
+pltsim = SimMatrixPlot()
 rand   = Randomize
 
 ctools = Tools()

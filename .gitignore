@@ -3,3 +3,8 @@
 /logs
 /results
 sdfv
+*pycache*
+bids/__pycache__
+*.pyc
+*.nii
+*.gz

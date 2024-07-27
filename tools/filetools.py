@@ -109,8 +109,6 @@ class FileTools:
         return recording_list[ids,:]
 
 
-
-
     def align_spectra(self, *spectra, target_length=None):
         """
         Aligns multiple spectra arrays to a common size using interpolation.

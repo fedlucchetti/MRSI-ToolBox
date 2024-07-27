@@ -5,7 +5,7 @@ from os.path import join, split ,exists
 import os , math
 import matplotlib.pyplot as plt
 from tools.filetools import FileTools
-from graphplot.simmatrix import SimMatrix
+from graphplot.simmatrix import SimMatrixPlot
 from connectomics.nettools import NetTools
 import copy
 from connectomics.network import NetBasedAnalysis
@@ -22,7 +22,7 @@ NITERATIONS = 10000
 dutils = DataUtils()
 resultdir = join(dutils.ANARESULTSPATH,"connectomes_M_vs_S")
 GROUP    = "Mindfulness-Project"
-simplt   = SimMatrix()
+simplt   = SimMatrixPlot()
 ftools   = FileTools(GROUP)
 debug    = Debug()
 nettools = NetTools()
@@ -31,9 +31,10 @@ nba      = NetBasedAnalysis()
 
 
 data = np.load(join(resultdir,"simM_metab_struct.npz"))
-struct_con_arr  = data["struct_con_arr"]
-metab_con_arr   = data["metab_con_arr"]
-metab_pvalues   = data["metab_pvalues"]
+for k in data.keys():print(k)
+struct_con_arr  = data["density_con_arr"]
+metab_con_arr   = data["metab_con_sp_arr"]
+metab_pvalues   = data["metab_pvalues_sp"]
 subject_id_arr  = data["subject_id_arr"]
 session_arr     = data["session_arr"]
 
@@ -66,7 +67,11 @@ for i,sim in enumerate(metab_con_arr):
         metab_con_arr_refined.append(sim)
         session_arr_ref.append(session_arr[i])
         subject_id_arr_ref.append(subject_id_arr[i])
+    else:
+        debug.error(subject_id_arr[i],session_arr[i])
 
+
+sys.exit()
 metab_con_arr_refined = np.array(metab_con_arr_refined)
 session_arr_ref       = np.array(session_arr_ref)
 subject_id_arr_ref    = np.array(subject_id_arr_ref)

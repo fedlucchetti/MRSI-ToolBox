@@ -12,20 +12,35 @@ from scipy.stats import chi2
 from sklearn.metrics import mutual_info_score
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import warnings
+import random
 from threading import Thread, Event
 import csv, copy, sys, time
 from tools.debug import Debug
 from rich.progress import Progress,track
 import scipy.stats as stats
+import statsmodels.api as sm
 from tools.datautils import DataUtils
 from concurrent.futures import ProcessPoolExecutor
 # from tqdm.auto import tqdm  # For progress bar
 import itertools
+from sklearn.linear_model import LinearRegression
+from nilearn import datasets
+from nilearn.image import resample_to_img
+import xml.etree.ElementTree as ET
+from scipy.stats import ConstantInputWarning
+
+# Suppress only the ConstantInputWarning from scipy.stats
+warnings.filterwarnings("ignore", category=ConstantInputWarning)
 
 
 dutils = DataUtils()
 debug  = Debug()
 reg    = Registration()
+
+
+
+
+
 
 class Parcellate:
     def __init__(self) -> None:
@@ -33,6 +48,145 @@ class Parcellate:
         self.PARCEL_PATH      = join(dutils.SAFEDRIVE,"Connectome","Data","Mindfulness-Project","derivatives","chimera-atlases")
         self.PARCEL_PATH_ARMS = join(dutils.SAFEDRIVE,"Connectome","Data","LPN-Project","derivatives","chimera-atlases")
         pass
+
+
+    def parse_atlas_xml(self,file_path,prefix=""):
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+
+        index_numbers = []
+        labels = []
+
+        for label in root.findall('.//label'):
+            index_numbers.append(int(label.get('index')))
+            labels.append(prefix+label.text)
+
+        return index_numbers, labels
+
+    def create_parcel_image(self,atlas_string="aal"):
+        # Load the AAL atlas
+        if atlas_string == "aal":
+            atlas   = datasets.fetch_atlas_aal(version='SPM12')
+            labels  = atlas['labels']
+            indices = atlas['indices']
+            maps    = atlas['maps']
+            header  = nib.load(maps).header
+            start_idx = 1
+            # Load the T1 image
+            # Resample the atlas to the T1 image
+            parcel_image = nib.load(maps).get_fdata()
+            # parcel_image = nib.load(maps).get_fdata()
+        elif atlas_string== "destrieux":
+            atlas = datasets.fetch_atlas_destrieux_2009()
+            labels,indices = list(),list()
+            for entry in atlas['labels']:
+                if entry[0]==0:continue
+                indices.append(entry[0])
+                labels.append(entry[1])
+            maps   = atlas['maps']
+            header = nib.load(maps).header
+            start_idx = 1
+            # Load the T1 image
+            parcel_image = nib.load(maps).get_fdata()
+            # Resample the atlas to the T1 image
+            # parcel_image = resample_to_img(maps, t1_img, interpolation='nearest').get_fdata()
+        elif atlas_string == "jhu_icbm_wm":
+            maps = join(dutils.DEVANALYSEPATH,"data","atlas","jhu_icbm_wm","JHU-ICBM-tracts-maxprob-thr25-2mm.nii.gz")
+            indices, labels = self.parse_atlas_xml(maps.replace(".nii.gz",".xml"))
+            indices=np.array(indices).astype(int)+1 # starts at 0
+            header = nib.load(maps).header
+            start_idx = 9001
+            parcel_image = nib.load(maps).get_fdata()
+        elif atlas_string == "cerebellum":
+            maps = join(dutils.DEVANALYSEPATH,"data","atlas","cerebellum_mnifnirt","Cerebellum_MNIfnirt.nii.gz")
+            indices, labels = self.parse_atlas_xml(maps.replace(".nii.gz",".xml"),prefix="cer-")
+            indices         = np.array(indices).astype(int)+1 # starts at 0
+            header          = nib.load(maps).header
+            start_idx       = 6001
+            parcel_image    = nib.load(maps).get_fdata()
+        elif atlas_string == "geometric_cubeK23mm":
+            gm_mask_mni152  = datasets.load_mni152_gm_mask()
+            parcel_image    = self.parcellate_volume(gm_mask_mni152.get_fdata(), K=23)
+            indices         = np.arange(0,parcel_image.max())
+            header          = gm_mask_mni152.header
+            start_idx       = 1
+            labels          = (indices+1).astype(str)
+        elif atlas_string == "geometric_cubeK18mm":
+            gm_mask_mni152  = datasets.load_mni152_gm_mask()
+            parcel_image    = self.parcellate_volume(gm_mask_mni152.get_fdata(), K=18)
+            indices         = np.arange(0,parcel_image.max())
+            header          = gm_mask_mni152.header
+            start_idx       = 1
+            labels          = (indices+1).astype(str)
+        elif atlas_string == "wm_cubeK18mm":
+            wm_mask_mni152  = datasets.load_mni152_wm_mask()
+            gm_mask_mni152  = datasets.load_mni152_gm_mask()
+            wm_mask = copy.deepcopy(wm_mask_mni152.get_fdata())
+            wm_mask[gm_mask_mni152.get_fdata()==1] = 0
+            parcel_image    = self.parcellate_volume(wm_mask, K=18)
+            indices         = np.arange(0,parcel_image.max())
+            header          = wm_mask_mni152.header
+            start_idx       = 9001
+            labels          = (indices+1).astype(str)
+        else:
+            debug.error(atlas_string,"not recognized")
+            return
+
+
+        # Create a mapping of indices to labels
+        parcel_image = parcel_image.astype(int)
+        indices      = np.array(indices).astype(int)
+        new_indices = np.arange(start_idx,start_idx+len(indices)).astype(int)
+        new_parcel_image = np.zeros(parcel_image.shape)
+        for i, index in enumerate(indices):
+            mask = parcel_image == index
+            new_parcel_image[mask] = new_indices[i]
+
+        return new_parcel_image.astype(int), labels, new_indices, header
+
+    def generate_random_color(self):
+        return "#{:06x}".format(random.randint(0, 0xFFFFFF))
+
+    def create_tsv(self,labels,indices, output_file):
+        with open(output_file, 'w') as f:
+            f.write("index\tname\tcolor\n")
+            for i, label in enumerate(labels):
+                index = indices[i]
+                color = self.generate_random_color()
+                f.write(f"{index}\t{label}\t{color}\n")
+
+
+    def __merge_gm_wm_parcel(self,A,B):
+        C = A+B
+
+    def merge_gm_wm_parcel(self,gmParcel, wmParcel):
+        A,B = gmParcel, wmParcel
+        # Ensure A and B are numpy arrays
+        A = np.array(A)
+        B = np.array(B)
+        return np.where(A != 0, A, B)
+        
+        # # Check if A and B have the same shape
+        # if A.shape != B.shape:
+        #     raise ValueError("A and B must have the same shape")
+        
+        # # Create the result array
+        # result = np.zeros_like(A)
+        
+        # # Apply the conditions
+        # mask_A_zero = (A == 0)
+        # mask_B_zero = (B == 0)
+        
+        # result[mask_A_zero & ~mask_B_zero] = B[mask_A_zero & ~mask_B_zero]
+        # result[~mask_A_zero & mask_B_zero] = A[~mask_A_zero & mask_B_zero]
+        # result[~mask_A_zero & ~mask_B_zero] = A[~mask_A_zero & ~mask_B_zero]
+        
+        # return result
+
+    def merge_gm_wm_dict(self,parcel_header_dict_gm,parcel_header_dict_wm):
+        parcel_header_dict = copy.deepcopy(parcel_header_dict_gm)
+        parcel_header_dict.update(parcel_header_dict_wm)   # Update the copy with the second dictionary
+        return parcel_header_dict
 
     def dilate(img,new_shape = (193, 229, 193), extension_mode="constant"):
         # Calculate the zoom factors for each dimension
@@ -87,15 +241,14 @@ class Parcellate:
         return path
     
 
-    def get_parcel_header(self,parcel_header_path):
+    def get_parcel_header(self,parcel_header_path,cutoff=3000):
         '''
         Retrieves and filters a brain parcel image for a given subject 
         based on an ignore list. 
 
         Parameters:
-        - subject_id (str): Unique identifier for the subject whose parcel data is to be retrieved.
-        - ignore_list (list of str): Labels of parcels to be excluded from the output.
-
+        - parcel_header_path (str): Unique identifier for the subject whose parcel data is to be retrieved.
+        - cutoff: vut off parcel labels above value default=3000 [WM parcels]
         Returns:
         - tuple: 
             - filtered parcel image (numpy array), 
@@ -108,7 +261,7 @@ class Parcellate:
         
         header_dict = dict()
         for idx , parcel_id in enumerate(parcel_ids):
-            if parcel_id<1000:
+            if cutoff is None or parcel_id < cutoff:
                 header_dict[parcel_id] = {"label":label_list[idx],"color":color_codes[idx],"mask":1,
                                                 "count":[],"mean":0,"std":0,"med":0,"t1cov":[]}
         header_dict[0] = {"label":["BND"],"color":0,"mask":0,"count":[0],"mean":0,"std":0,"med":0,"t1cov":[0]}
@@ -158,11 +311,14 @@ class Parcellate:
         return filt_parcel_image,parcel_header_dict
 
     def merge_parcels(self,parcel_image,parcel_header_dict, merge_parcels_dict):
+        # debug.error("parcel_header_dict[28]",parcel_header_dict[28])
         merged_parcel_image = copy.deepcopy(parcel_image)
         for key, entry in merge_parcels_dict.items():
             base_label = entry["merge"][0]
             merge_ids  = range(entry["merge"][0] + 1, entry["merge"][1] + 1)  # exclude parcel id to merge with
-            parcel_header_dict[key]["label"] = entry["label"]
+            # debug.success("parcel_header_dict[key]",parcel_header_dict[int(key)])
+            # debug.info(key, entry,entry["label"])
+            parcel_header_dict[int(key)]["label"] = entry["label"]
             for merge_idx in merge_ids:
                 # Update the parcel image to merge the labels
                 merged_parcel_image[parcel_image == merge_idx] = base_label
@@ -251,7 +407,7 @@ class Parcellate:
                 labels.append(label)
                 colors.append(color)
 
-        return numbers, labels, colors
+        return np.array(numbers), labels, colors
 
 
     def count_voxels_per_parcel(self,parcel_image, mask_mrsi,mask_t1,parcel_header_dict):
@@ -280,7 +436,7 @@ class Parcellate:
 
 
 
-    def parcellate_vectorized(self,met_image4D_data, parcel_image3D, parcel_header_dict, rescale="mean", parcel_concentrations=None):
+    def parcellate_vectorized(self,met_image4D_data, parcel_image3D, parcel_header_dict, rescale="zscore", parcel_concentrations=None):
         """
         Update or create parcel_concentrations with average metabolite concentrations.
         
@@ -294,7 +450,11 @@ class Parcellate:
         Returns:
         - Updated or new dictionary with parcel IDs as keys and lists of average concentrations as values.
         """
-        parcel_ids_list = list(parcel_header_dict.keys())
+        if isinstance(parcel_header_dict,dict):
+            parcel_ids_list = list(parcel_header_dict.keys())
+        elif isinstance(parcel_header_dict,list):
+            parcel_ids_list = copy.deepcopy(parcel_header_dict)
+
         n_metabolites   = met_image4D_data.shape[0]
 
         if rescale=="mean":
@@ -327,6 +487,35 @@ class Parcellate:
                     parcel_concentrations[parcel_id].append(avg_concentration)
 
         return parcel_concentrations
+    
+    def count_voxels_inside_parcel(self,image3D, parcel_image3D, parcel_ids_list):
+        parcel_count = {}
+
+        # Loop through each parcel ID in the provided list
+        for parcel_id in parcel_ids_list:
+            # Skip if the parcel ID is 0
+            if parcel_id == 0:
+                continue
+            
+            # Create a mask for the current parcel ID
+            parcel_mask = parcel_image3D == parcel_id
+            
+            # Check if there are any voxels in this parcel
+            n_total = parcel_mask.sum()
+            if n_total == 0:
+                continue
+            
+            # Count the number of voxels in the image3D that are inside the current parcel
+            image_mask = image3D[parcel_mask].sum()
+            
+            # Calculate the percentage coverage
+            n_coverage = image_mask / n_total
+            
+            # Assign the count to the dictionary
+            parcel_count[parcel_id] = n_coverage
+        
+        # Return the dictionary containing the voxel counts
+        return parcel_count
    
 
     def mutual_information(self, X_discretized, Y_discretized, n_permutations=1000):
@@ -385,6 +574,56 @@ class Parcellate:
             # break
         return np.array(simmatrix_arr)
 
+
+    def parcellate_volume(self,brain_mask, K=2):
+        """
+        Parcellate the 3D volume into equally shaped cubes of size KxKxK.
+
+        Parameters:
+        - brain_mask: 3D numpy array representing the grey or white matter mask (binary mask).
+        - K: size of the cubes for parcellation.
+
+        Returns:
+        - parcel_image3d: 3D numpy array with the same shape as `brain_mask` where each voxel
+        is labeled by the index of the cube resulting from the parcellation.
+        """
+        # Get the shape of the volume
+        x, y, z = brain_mask.shape
+        
+        # Initialize the parcel_image3d with -1 (for regions outside the mask)
+        parcel_image3d = -np.ones_like(brain_mask, dtype=int)
+
+        # Initialize a counter for parcel labels
+        parcel_label = 1
+
+        # Iterate over the volume in steps of K, ensuring full coverage
+        for i in track(range(0, x, K // 2), description="Cubic Parcellation..."):
+            for j in range(0, y, K // 2):
+                for k in range(0, z, K // 2):
+                    # Check if the current starting voxel is within the brain mask
+                    if brain_mask[i, j, k] == 0:
+                        continue
+
+                    # Define the current cube boundaries
+                    x_start = max(0, int(i - np.floor(K / 2)))
+                    x_end = min(x, x_start + K)
+
+                    y_start = max(0, int(j - np.floor(K / 2)))
+                    y_end = min(y, y_start + K)
+
+                    z_start = max(0, int(k - np.floor(K / 2)))
+                    z_end = min(z, z_start + K)
+
+                    # Get the current cube
+                    current_cube = brain_mask[x_start:x_end, y_start:y_end, z_start:z_end]
+                    
+                    # Check if there are at least 6 grey matter voxels in the current cube
+                    if np.sum(current_cube) >= 6:
+                        # Label the voxels in the cube
+                        parcel_image3d[x_start:x_end, y_start:y_end, z_start:z_end][current_cube > 0] = parcel_label
+                        parcel_label += 1
+
+        return parcel_image3d
 
     def extract_metabolite_per_parcel(self,array):
         N_metabolites = 5
@@ -454,6 +693,10 @@ class Parcellate:
                             result = linregress(parcel_x, parcel_y)
                             corr = result.rvalue
                             pvalue = result.pvalue
+                        elif corr_mode == "spearman2":
+                            result = self.speanman_corr_quadratic(parcel_x, parcel_y)
+                            corr = result["corr"]
+                            pvalue = result["pvalue"]
                         elif corr_mode == "mi":
                             corr, pvalue = mutual_information(parcel_x, parcel_y, n_permutations)
                         submatrix[i, j]        = corr
@@ -515,6 +758,8 @@ class Parcellate:
         return combined_p_value_mat
 
 
+
+
     def get_main_parcel_plot_positions(self,sel_parcel_list,label_list_concat):
         parcel_ids_positions=dict()
         start_l = 0
@@ -523,10 +768,11 @@ class Parcellate:
             for idp,parcel_label in enumerate(label_list_concat):
                 if sel_parcel in parcel_label:
                     parcel_id_coord_list.append(idp)
-            a,b = min(parcel_id_coord_list),max(parcel_id_coord_list)+0.5
-            # debug.info(max(0,a-0.5),b)
-            parcel_ids_positions[sel_parcel] = [max(0,a-0.5),b]
-            start_l = b
+            if len(parcel_id_coord_list)!=0:
+                a,b = min(parcel_id_coord_list),max(parcel_id_coord_list)+0.5
+                # debug.info(max(0,a-0.5),b)
+                parcel_ids_positions[sel_parcel] = [max(0,a-0.5),b]
+                start_l = b
         label_list_concat = np.array(label_list_concat)
         return parcel_ids_positions, label_list_concat
 
@@ -545,6 +791,18 @@ class Parcellate:
         rescaled_matrix = -1 + 2 * (matrix - min_val) / (max_val - min_val)
         
         return rescaled_matrix
+
+    def speanman_corr_quadratic(self,X, Y):
+        model = LinearRegression()
+        model.fit(X.reshape(-1, 1), Y)
+        slope = model.coef_[0]
+        intercept = model.intercept_
+        # Compute Spearman's rank correlation for second-order (quadratic) relationship
+        spearman_corr_quadratic, spearman_pvalue_quadratic = spearmanr(X**2, Y-slope*X-intercept)
+        return {
+            "corr": spearman_corr_quadratic,
+            "pvalue": spearman_pvalue_quadratic
+        }
 
 
     def find_boundaries(self,mask, axis=0):
@@ -652,3 +910,35 @@ class Parcellate:
             centroid = np.nanmean(voxels, axis=0)
             centroids.append(tuple(centroid))
         return centroids
+    
+
+    def generate_random_color(self):
+        """Generates a random color code in the format #RRGGBB"""
+        return "#{:06x}".format(random.randint(0, 0xFFFFFF))
+
+    def initialize_label_dict(self,gm_mask_np):
+        """
+        Initializes a dictionary for the given grey matter mask numpy array.
+
+        Parameters:
+        - gm_mask_np: 3D numpy array representing the grey matter mask.
+
+        Returns:
+        - label_dict: Dictionary with the specified structure.
+        """
+        unique_labels = np.unique(gm_mask_np)
+        label_dict = {}
+
+        for key in range(len(unique_labels)):
+            label_dict[key] = {
+                'label': [key],
+                'color': self.generate_random_color(),
+                'mask': 1,
+                'count': [],
+                'mean': 0,
+                'std': 0,
+                'med': 0,
+                't1cov': []
+            }
+        
+        return label_dict

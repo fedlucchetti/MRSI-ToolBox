@@ -73,7 +73,7 @@ class NetBasedAnalysis:
                 binarized[simmatrix <= threshold] = 1
             else:
                 binarized[simmatrix <= threshold] = simmatrix[simmatrix <= threshold]
-        debug.info(threshold)
+        # debug.info(threshold)
         return binarized
 
     def threshold_density(self, matrix, density):
@@ -233,6 +233,17 @@ class NetBasedAnalysis:
         
         return degree_distribution
 
+    def get_degree_per_node(self,similarity_matrix):
+        adjacency_matrix = np.where(similarity_matrix == -1, 0, similarity_matrix)
+        
+        # Convert the numpy array to a NetworkX graph
+        G = nx.from_numpy_array(adjacency_matrix)
+        
+        # Get the degree of each node
+        degrees = [d for n, d in G.degree()]
+        return degrees
+
+
     def clustering_coefficient_distribution(self,similarity_matrix):
         """
         Computes the clustering coefficients and corresponding degrees from a binarized 
@@ -266,7 +277,8 @@ class NetBasedAnalysis:
 
     def get_rc_distribution(self, simmatrix_binarized, threshold_degree=0.8):
         ######### RichClub ########
-        adjacency_matrix = np.where(simmatrix_binarized == -1, 1, simmatrix_binarized)
+        # adjacency_matrix = np.where(simmatrix_binarized == -1, 1, simmatrix_binarized)
+        adjacency_matrix = copy.deepcopy(simmatrix_binarized)
         np.fill_diagonal(adjacency_matrix, 0)
         G = nx.from_numpy_array(adjacency_matrix)
         reference_degrees = np.array(sorted(set(d for n, d in G.degree())))
@@ -298,16 +310,28 @@ class NetBasedAnalysis:
   
 
 
-    def extract_subnetwork(self,simmatrix_binarized,degree):
-        if degree is not None:
-            adjacency_matrix = np.where(simmatrix_binarized == -1, 1, simmatrix_binarized)
-            np.fill_diagonal(adjacency_matrix, 0)
-            G = nx.from_numpy_array(adjacency_matrix)
-            # Identify rich-club nodes
-            subnetwork_node_indices = [n for n, d in G.degree() if d >= degree]
-            # Create submatrix for rich-club nodes
-            degrees = simmatrix_binarized[subnetwork_node_indices].sum(axis=0)
-        return subnetwork_node_indices, degrees
+    def extract_subnetwork(self,simmatrix_binarized,degree_cutoff=None,parcel_indices=[]):
+        
+        adjacency_matrix = simmatrix_binarized.copy()  # Use a copy to avoid modifying the original matrix
+        np.fill_diagonal(adjacency_matrix, 0)
+        G = nx.from_numpy_array(adjacency_matrix)
+        
+        # Identify rich-club nodes
+        if degree_cutoff is not None:
+            subnetwork_node_indices = [n for n, d in G.degree() if d >= degree_cutoff]
+        else: 
+            subnetwork_node_indices = [n for n, d in G.degree()]
+        # Compute degrees for the rich-club nodes
+        subnetwork = G.subgraph(subnetwork_node_indices)
+        degrees = dict(subnetwork.degree())
+        
+        # Convert degrees to a list in the same order as subnetwork_node_indices
+        degrees_list = [degrees[node] for node in subnetwork_node_indices]
+        if len(parcel_indices)>0:
+            subnetwork_node_indices = parcel_indices[subnetwork_node_indices]
+        return subnetwork_node_indices, degrees_list
+
+
 
 
     def rich_club_coefficient_curve(self,G, reference_degrees):

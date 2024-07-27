@@ -59,20 +59,27 @@ class Registration():
 
         return outpath, mask_path
 
-    def __load_ants_image(self,input):
+
+    def __load_ants_image(self, input):
         """
-        Checks if the input is a path or an ANTsImage. If it's a path, it loads the image.
-        Returns the ANTsImage or None if the input is invalid.
+        Checks if the input is a path, an ANTsImage, or a Nifti2Image. If it's a path, it loads the image.
+        Returns the ANTsImage, Nifti2Image, or None if the input is invalid.
         """
         if isinstance(input, str):
             if not os.path.exists(input):
-                debug.error("__load_ants_image: Image path does not exist:", input)
+                debug.error("__load_ants_image: Image path does not exist: %s", input)
                 return None
-            return ants.image_read(input)
-        elif isinstance(input, ants.ANTsImage):
+            try:
+                return ants.image_read(input)
+            except Exception as e:
+                debug.error("__load_ants_image: Error reading image from path %s: %s", input, e)
+                return None
+        elif isinstance(input, ants.core.ants_image.ANTsImage):
             return input
+        elif isinstance(input, nib.Nifti1Image):
+            return ants.from_nibabel(input)
         else:
-            debug.error("__load_ants_image: Input must be a path or an ANTsImage object.")
+            debug.error("__load_ants_image: Input must be a path, an ANTsImage, or a Nifti1Image object.")
             return None
 
     def register(self, fixed_input, moving_input,fixed_mask=None,moving_mask=None ,transform="sr",verbose=False):

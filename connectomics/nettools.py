@@ -7,6 +7,7 @@ from os.path import split, join
 import numpy as np
 import nibabel as nib
 from scipy.sparse import csgraph
+from scipy.spatial.distance import cdist
 
 ft     = FileTools()
 debug  = Debug()
@@ -16,7 +17,28 @@ class NetTools:
     def __init__(self) -> None:
         pass
 
+    def compute_average_coordinate(self,label_image, label_value):
+        # Find the indices where the label image equals the given label value
+        indices = np.argwhere(label_image == label_value)
+        
+        # Compute the mean of these indices along the first axis
+        average_coordinate = np.mean(indices, axis=0)
+        
+        return average_coordinate
 
+    def compute_centroids(self,label_image, label_indices):
+        # Compute the average coordinate (centroid) for each label in label_indices
+        centroids = np.array([self.compute_average_coordinate(label_image, label) for label in label_indices])
+        
+        return centroids
+
+
+    def compute_distance_matrix(self,centroids):
+        # Compute the pairwise Euclidean distance matrix
+        distance_matrix = cdist(centroids, centroids, metric='euclidean')
+        
+        return distance_matrix
+    
     def laplacian_spectrum(self,bin_matrix):
         """
         Computes the Laplacian spectrum of a binarized similarity matrix.
@@ -71,37 +93,6 @@ class NetTools:
                 new_j = new_index_map[j]
                 new_matrix[new_i, new_j] += simmatrix[i, j]
         return new_matrix
-
-    def construct_metabolic_simmilarity(self,metab_con_arr,metab_pvalues,ALPHA=0.05,threshold=0.69):
-        """
-        Constructs a metabolic similarity matrix from correlation arrays and p-values associated
-        with the metabolic connections. It generates both a merged continuous correlation matrix
-        and a binary correlation matrix based on significance and a threshold value.
-        Returns:
-        - tuple (numpy.ndarray, numpy.ndarray):
-        - The first array is the binary metabolic correlation matrix.
-        - The second array is the continuous (mean) metabolic correlation matrix.
-        """
-        n_subjects = metab_con_arr.shape[0]
-        n_labels   = metab_con_arr.shape[-1]
-        metab_con_merged     = np.zeros([n_subjects,n_labels,n_labels])
-        metab_con_bin_merged = np.zeros([n_subjects,n_labels,n_labels])
-        for ids,metab_con_subj in enumerate(metab_con_arr):
-            
-            metab_con_subj[metab_pvalues[ids]< ALPHA] = np.sign(metab_con_subj[metab_pvalues[ids]< ALPHA])
-            metab_con_subj[metab_pvalues[ids]> ALPHA] = 0
-            if len(metab_con_subj.shape)==3:
-                metab_con_merged[ids]   = np.tanh(np.mean(np.arctanh(metab_con_subj),axis=0))
-                _metab_con_bin_merged   = np.mean(metab_con_subj,axis=0)
-            else:
-                metab_con_merged        = metab_con_subj
-                _metab_con_bin_merged   = metab_con_subj
-            corr_sign = np.sign(_metab_con_bin_merged[np.abs(_metab_con_bin_merged)>=threshold])
-            _metab_con_bin_merged[np.abs(_metab_con_bin_merged)<threshold] = 0
-            _metab_con_bin_merged[np.abs(_metab_con_bin_merged)>=threshold] = corr_sign
-            metab_con_bin_merged[ids] = _metab_con_bin_merged
-        return metab_con_bin_merged, metab_con_merged
-
 
     def compute_joint_probability_distributions(self,metab_bin, struc_bin):
         """

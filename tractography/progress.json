@@ -508,5 +508,10 @@
         "V1": {
             "progress": "Error: No DWI or ANAT data found"
         }
+    },
+    "P001": {
+        "V1": {
+            "progress": 0
+        }
     }
 }

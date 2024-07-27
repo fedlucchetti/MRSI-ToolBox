@@ -6,7 +6,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name = "Analytics",
+    name = "MRSI-ToolBox",
     version = "2.0.0",
     description = ("Analysis toolbox for MRSI data"),
     license = "BSD",

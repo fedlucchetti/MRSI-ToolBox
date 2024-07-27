@@ -6,7 +6,7 @@ class ProgressBar:
     def __progress_bar_task(self, duration):
         with Progress() as progress:
             # Create a task with a total of `duration` seconds
-            task = progress.add_task("[green]Registration...", total=duration)
+            task = progress.add_task("[green]", total=duration)
             
             # Update the progress bar every second
             for _ in range(duration):

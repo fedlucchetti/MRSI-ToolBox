@@ -5,7 +5,7 @@ from os.path import join, split
 import os , math
 import matplotlib.pyplot as plt
 from tools.filetools import FileTools
-from graphplot.simmatrix import SimMatrix
+from graphplot.simmatrix import SimMatrixPlot
 from bids.mridata import MRIData
 from bids.mridata import MRIData
 import nibabel as nib
@@ -20,7 +20,7 @@ from rich.table import Table
 dutils    = DataUtils()
 resultdir = join(dutils.ANARESULTSPATH,"connectomes_M_vs_S")
 GROUP     = "Mindfulness-Project"
-simplt    = SimMatrix()
+simplt    = SimMatrixPlot()
 ftools    = FileTools(GROUP)
 debug     = Debug()
 nettools  = NetTools()

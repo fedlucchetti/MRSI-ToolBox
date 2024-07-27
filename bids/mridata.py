@@ -6,15 +6,22 @@ from tools.datautils import DataUtils
 import re
 import numpy as np
 import json
-debug  = Debug()
+from registration.registration import Registration
+from tools.filetools import FileTools
+from nilearn import datasets
+
+
+
+debug  = Debug(verbose=False)
 dutils = DataUtils()
+reg    = Registration()
+ftools = FileTools()
 
-STRUCTURE_PATH = join(dutils.DEVPATH,"Analytics","bids","structure.json")
-
+STRUCTURE_PATH = dutils.BIDS_STRUCTURE_PATH
 subject_id_exc_list = ["CHUVA016","CHUVA028"]
-
-METABOLITES = ["NAANAAG", "Ins", "GPCPCh", "GluGln", "CrPCr"]
-
+METABOLITES         = ["NAANAAG", "Ins", "GPCPCh", "GluGln", "CrPCr"]
+ATLAS_LIST          = ["aal","destrieux","jhu_icbm_wm","wm_cubeK15mm","wm_cubeK18mm",
+                       "geometric_cubeK18mm","geometric_cubeK23mm","cerebellum","chimera"]
 
 
 class DynamicData:
@@ -26,14 +33,20 @@ class DynamicData:
 
 class  MRIData:
     def __init__(self, subject_id,session,group="Mindfulness-Project"):
-        self.ROOT_PATH           = join(dutils.SAFEDRIVE,"Connectome","Data",group)
+        self.ROOT_PATH           = join(dutils.DATAPATH,group)
         self.PARCEL_PATH         = join(self.ROOT_PATH,"derivatives","chimera-atlases")
+        self.CONNECTIVITY_PATH   = join(self.ROOT_PATH,"derivatives","connectomes")
+        self.HOMOTOPY_PATH       = join(self.ROOT_PATH,"derivatives","homotopy")
+        os.makedirs(self.HOMOTOPY_PATH,exist_ok=True)
+
         if group=="LPN-Project":
             if subject_id in subject_id_exc_list:
                 subject_id=subject_id.replace("CHUV","CHUVN")
             else:
                 self.subject_id = subject_id
         elif group=="Mindfulness-Project":
+            self.subject_id = subject_id
+        elif group=="PilotProject":
             self.subject_id = subject_id
         
         self.data = json.load(open(STRUCTURE_PATH))
@@ -45,7 +58,11 @@ class  MRIData:
         self.load_t1w()
         self.load_dwi_all()
         self.load_parcels()
-        debug.success("Loaded MRI data from",subject_id,session)
+        self.load_connectivity("dwi")
+        self.load_connectivity("spectroscopy")
+        self.load_homotopy()
+        self.load_featured4d()
+        # debug.success("Loaded MRI data from",subject_id,session)
         self.metabolites = np.array(METABOLITES)
         # self.data = DynamicData(**self.data)
  
@@ -55,7 +72,7 @@ class  MRIData:
         if os.path.exists(path):
             return path
         else:
-            debug.warning("path does not exists")
+            debug.warning("get_mri_dir_path: path does not exists")
             debug.warning(path)
             return 
         
@@ -65,6 +82,24 @@ class  MRIData:
             return path
         else:
             debug.warning("path does not exists")
+            debug.warning(path)
+            return 
+        
+    def get_connectivity_dir_path(self,modality="dwi"):
+        path = join(self.CONNECTIVITY_PATH,f"sub-{self.subject_id}",f"ses-{self.session}",modality)
+        if os.path.exists(path):
+            return path
+        else:
+            debug.warning("connectivity path does not exists")
+            debug.warning(path)
+            return 
+        
+    def get_homotopy_dir_path(self):
+        path = join(self.HOMOTOPY_PATH,f"sub-{self.subject_id}",f"ses-{self.session}","spectroscopy")
+        if os.path.exists(path):
+            return path
+        else:
+            debug.warning("homotopy path does not exists")
             debug.warning(path)
             return 
         
@@ -101,11 +136,76 @@ class  MRIData:
                     comp = desc
                 elif desc in METABOLITES and acq=="crlb":
                     comp = f"{desc}-crlb"
+                elif desc == "Voxel" and acq=="fwhm":
+                    comp = "fwhm"
+                elif desc == "Voxel" and acq=="snr":
+                    comp = "snr"
                 else:
                     continue
                 self.data["mrsi"][comp][space]["nifti"] = nib.load(join(dirpath,filename))
                 self.data["mrsi"][comp][space]["path"]  = join(dirpath,filename)
         self.get_mrsi_mask_image()
+    
+    def get_mrsi_volume(self,comp,space):
+        path = self.get_path("spectroscopy",comp,space)
+        try:
+            _ = nib.load(path).get_fdata()
+            return nib.load(path)
+        except Exception as e:
+            if space=="orig":
+                __nifti        = self.data["mrsi"][comp]["orig"]["nifti"]
+                return __nifti
+            elif space=="t1w":
+                t1w_ref        = self.data["t1w"]["brain"]["orig"]["path"]
+                transform_list = self.get_transform("forward","spectroscopy")
+                if "snr" in comp or "fwhm" in comp or "crlb" in comp:
+                    _space = "orig"
+                else: _space = "origfilt"
+                mrsi_orig_path = self.data["mrsi"][comp][_space]["path"]
+                # print("get_mrsi_volume ",mrsi_orig_path)
+                mrsi_anat_np   = reg.transform(t1w_ref,mrsi_orig_path,transform_list).numpy()
+                header         = nib.load(t1w_ref).header
+                return ftools.numpy_to_nifti( mrsi_anat_np, header)
+            elif space=="mni":
+                mrsi_anat_nii  = self.get_mrsi_volume(comp,"t1w")
+                mni_ref        = datasets.load_mni152_template()
+                transform_list = self.get_transform("forward","anat")
+                mrsi_mni_np    = reg.transform(mni_ref,mrsi_anat_nii,transform_list).numpy()
+                header         = mni_ref.header
+                return ftools.numpy_to_nifti( mrsi_mni_np, header)
+
+    def get_path(self,modality,comp,space):
+        debug.error("1:modality",modality)
+        dir_path = self.get_mri_dir_path(modality)
+        debug.error("2:dir_path",dir_path)
+        filename = f"sub-{self.subject_id}_ses-{self.session}"
+        if modality=="spectroscopy":
+            if "crlb" in comp:
+                acq = "crlb"
+                desc = comp.replace("-crlb","")
+            elif comp in METABOLITES or comp == "brainmask" or comp == "mask":
+                acq = "conc"
+                desc = comp
+            elif comp == "snr" or comp == "fwhm":
+                acq = comp
+                desc = "Voxel"
+            else:
+                debug.error("MRIData:get_path unrecognized component")
+                return
+            filename += f"_space-{space}_acq-{acq}"
+            filename += f"_desc-{desc}_spectroscopy.nii.gz"
+        elif modality=="anat":
+            if space=="orig":
+                filename += f"_run-01_acq-memprage_{comp}.nii.gz"
+            elif space=="mrsi" or space=="mni":
+                filename += f"_run-01_space-{space}_acq-memprage_{comp}.nii.gz"
+            else:
+                debug.error("MRIData:get_path unrecognized component")
+                return
+        else:
+            debug.error("MRIData:get_path unrecognized modality")
+            return
+        return join(dir_path,filename)
     
     def load_t1w(self):
         dirpath = self.get_mri_dir_path("anat")
@@ -117,10 +217,10 @@ class  MRIData:
         for filename in filenames:
             path = join(dirpath,filename)
             if "T1w_brain.nii.gz" in filename:
-                self.data["t1w"]["brain"]["orig"]["nifti"] = nib.load(path)
+                # self.data["t1w"]["brain"]["orig"]["nifti"] = nib.load(path)
                 self.data["t1w"]["brain"]["orig"]["path"]  = path
             elif "T1w_brainmask.nii.gz" in filename:
-                self.data["t1w"]["mask"]["orig"]["nifti"] = nib.load(path)
+                # self.data["t1w"]["mask"]["orig"]["nifti"] = nib.load(path)
                 self.data["t1w"]["mask"]["orig"]["path"] = path
 
     def load_parcels(self):
@@ -129,20 +229,93 @@ class  MRIData:
         if dirpath==None:
             return 
         filenames = os.listdir(dirpath)
+        debug.info("load_parcels:found n",len(filenames),"Filenames")
         if len(filenames)==0:
             return
         filename = filenames[0]
         for filename in filenames:
+            path = join(dirpath,filename)
+            if ".nii.gz" in filename and "dseg" in filename and "wm_mask" not in filename:
+                
+                space = self.extract_suffix(filename,"space")
+                # debug.info("load_parcels:filename",filename)
+                # if space == "orig":
+                for atlas in ATLAS_LIST:
+                    if atlas in filename and atlas!="chimera":
+                        debug.info("load_parcels:Found",atlas,space,filename)
+                        self.data["parcels"][atlas][space]["path"]      = path
+                        self.data["parcels"][atlas][space]["labelpath"] = path.replace("nii.gz","tsv")
+                    elif atlas in filename and atlas=="chimera":
+                        scale,scheme  = self.extract_scale_number(filename)
+                        self.data["parcels"][f"{scheme}-{scale}"][space]["path"]      = path
+                        self.data["parcels"][f"{scheme}-{scale}"][space]["labelpath"] = path.replace("nii.gz","tsv")
+
+    def load_connectivity(self,mode="dwi"):
+        dirpath = self.get_connectivity_dir_path(mode)
+        # debug.info("load_parcels:dirpath",dirpath)
+        if dirpath==None:
+            return 
+        filenames = os.listdir(dirpath)
+        if len(filenames)==0:
+            return
+        # filename = filenames[0]
+        for filename in filenames:
             # debug.info("load_parcels:filename",filename)
             path = join(dirpath,filename)
-            if ".nii.gz" in filename and "chimera" in filename:
-                space = self.extract_suffix(filename,"space")
-                if space == "orig":
-                    scale,scheme  = self.extract_scale_number(filename)
-                    self.data["parcels"][f"{scheme}-{scale}"]["orig"]["path"] = path
-                    self.data["parcels"][f"{scheme}-{scale}"]["orig"]["nifti"] = nib.load(path)
-                    self.data["parcels"][f"{scheme}-{scale}"]["orig"]["labelpath"] = path.replace("nii.gz","tsv")
+            if "_simmatrix.npz" in path:
+                for atlas in ATLAS_LIST:
+                    if atlas in filename and atlas!="chimera":
+                        self.data["connectivity"][mode][atlas]["path"] = path
+                    elif atlas in filename and atlas=="chimera":
+                        parc_scheme = self.extract_parcellation_substring(filename)
+                        self.data["connectivity"][mode][parc_scheme]["path"] = path 
 
+    def load_homotopy(self,include_wm=True):
+        include_wm = int(include_wm)
+        dirpath = self.get_homotopy_dir_path()
+        if dirpath==None:
+            return 
+        filenames = os.listdir(dirpath)
+        if len(filenames)==0:
+            return
+        # filename = filenames[0]
+        for filename in filenames:
+            # debug.info("load_parcels:filename",filename)
+            path = join(dirpath,filename)
+            if f"-homotopy_WM_{include_wm}.nii.gz" in path:
+                for atlas in ATLAS_LIST:
+                    if atlas in filename and atlas!="chimera":
+                        self.data["homotopy"][atlas]["path"] = path
+                    elif "LFMIHIFIF-3" in filename:
+                        self.data["homotopy"]["LFMIHIFIF-3"]["path"] = path
+                    elif "LFMIHIFIF-2" in filename:
+                        self.data["homotopy"]["LFMIHIFIF-2"]["path"] = path
+                    elif "LFMIHIFIF-4" in filename:
+                        self.data["homotopy"]["LFMIHIFIF-4"]["path"] = path
+                    
+
+    def load_featured4d(self,include_wm=True):
+        include_wm = int(include_wm)
+        dirpath = self.get_homotopy_dir_path()
+        if dirpath==None:
+            return 
+        filenames = os.listdir(dirpath)
+        if len(filenames)==0:
+            return
+        # filename = filenames[0]
+        for filename in filenames:
+            path = join(dirpath,filename)
+            if f"-featured4D_WM_{include_wm}.npz" in path:
+                debug.info("load_featured4d 2",filename)
+                for atlas in ATLAS_LIST:
+                    if atlas in filename and atlas!="chimera":
+                        self.data["featured4d"][atlas]["path"] = path
+                    elif "LFMIHIFIF-3" in filename:
+                        self.data["featured4d"]["LFMIHIFIF-3"]["path"] = path
+                    elif "LFMIHIFIF-2" in filename:
+                        self.data["featured4d"]["LFMIHIFIF-2"]["path"] = path
+                    elif "LFMIHIFIF-4" in filename:
+                        self.data["featured4d"]["LFMIHIFIF-4"]["path"] = path
 
 
     def extract_suffix(self,filename,suffix):
@@ -174,6 +347,38 @@ class  MRIData:
         scheme = match_scheme.group(1) if match_scheme else None
         scheme = scheme.replace("_desc","")
         return scale_number, scheme
+
+    def extract_parcellation_substring(self,input_string):
+        # Define regex patterns for the two types of substrings
+        pattern1 = r'geometric_cubeK23mm'
+        pattern2 = r'geometric_cubeK18mm'
+        pattern3 = r'chimeraLFIIHIFIF\d+'
+        pattern4 = r'chimeraLFMIHIFIF\d+'
+        pattern5 = r'wm_cubeK18mm\d+'
+        pattern6 = r'wm_cubeK15mm\d+'
+        
+        # Search for the patterns in the input string
+        match1 = re.search(pattern1, input_string)
+        match2 = re.search(pattern2, input_string)
+        match3 = re.search(pattern3, input_string)
+        match4 = re.search(pattern4, input_string)
+        match5 = re.search(pattern5, input_string)
+        match6 = re.search(pattern6, input_string)
+       
+        # Return the matched substring
+        if match1:
+            return match1.group()
+        if match2:
+            return match2.group()
+        if match5:
+            return match5.group()
+        if match6:
+            return match6.group()
+        elif "LFIIHIFIF" in input_string or "chimeraLFMIHIFIF" in input_string:
+            scale,scheme  = self.extract_scale_number(input_string)
+            return f"{scheme}-{scale}"
+        else:
+            return None
 
     def get_mrsi_mask_image(self):
         dirpath   = self.get_mri_dir_path("spectroscopy")
@@ -210,29 +415,8 @@ class  MRIData:
         self.data["mrsi"]["mask"]["origfilt"]["path"]  = outpath
 
 
-
-
-
-    def __get_parcel_image(self):
-        scheme = "LFMIIIFIF"
-        scale  = "3"
-        subject_id = self.subject_id
-        S,V = subject_id[0:4],subject_id[-2::]
-        filename = f"run-1_space-orig_atlas-chimera{scheme}_desc-scale{scale}grow2mm_dseg_mrsi.nii.gz"
-        path = join(self.PARCEL_PATH,f"sub-{S}", 
-                                    f"ses-{V}", 
-                                    "anat", 
-                                    f"sub-{S}_ses-{V}_{filename}")
-        if not os.path.exists(path):
-            path = join(self.PARCEL_PATH,f"sub-{S}", 
-                                        f"ses-{V}", 
-                                        "anat", 
-                                        f"sub-{S}_ses-{V}_{filename}")
-        image,header       = nib.load(path).get_fdata(),nib.load(path).header
-        return image,path, header
-
     def get_transform(self,direction,space,metabolite_ref="CrPCr"):
-        self.ROOT_PATH            = join(self.TRANSFORM_PATH,f"sub-{self.subject_id}",f"ses-{self.session}",space)
+        transform_dir_path            = join(self.TRANSFORM_PATH,f"sub-{self.subject_id}",f"ses-{self.session}",space)
 
         if space=="spectroscopy":
             transform_prefix     = f"sub-{self.subject_id}_ses-{self.session}_desc-mrsi_to_t1w"
@@ -243,15 +427,16 @@ class  MRIData:
 
         transform_list = list()
         if direction=="forward":  
-            transform_list.append(join(self.ROOT_PATH,f"{transform_prefix}.syn.nii.gz"))
-            transform_list.append(join(self.ROOT_PATH,f"{transform_prefix}.affine.mat"))
+            transform_list.append(join(transform_dir_path,f"{transform_prefix}.syn.nii.gz"))
+            transform_list.append(join(transform_dir_path,f"{transform_prefix}.affine.mat"))
         elif  direction=="inverse":
-            transform_list.append(join(self.ROOT_PATH,f"{transform_prefix}.affine_inv.mat"))
-            transform_list.append(join(self.ROOT_PATH,f"{transform_prefix}.syn_inv.nii.gz"))
+            transform_list.append(join(transform_dir_path,f"{transform_prefix}.affine_inv.mat"))
+            transform_list.append(join(transform_dir_path,f"{transform_prefix}.syn_inv.nii.gz"))
         return transform_list
 
 
 
 
 if __name__=="__main__":
-    mrsiData = MRIData(subject_id="CHUVA009",session="V5")
+    mrsiData = MRIData(subject_id="S038",session="V1")
+    print(mrsiData.data["connectivity"])

@@ -7,7 +7,7 @@ from scipy.stats import pearsonr
 import networkx as nx
 from scipy.stats import pareto
 from graphplot import circular as circplt
-from graphplot.simmatrix import SimMatrix
+from graphplot.simmatrix import SimMatrixPlot
 from tqdm import tqdm
 from registration.registration import Registration
 from rich.progress import Progress,track
@@ -33,7 +33,7 @@ reg    = Registration()
 pb     = ProgressBar()
 # pltsl  = PlotSlices()
 parc   = Parcellate()
-pltsim = SimMatrix()
+pltsim = SimMatrixPlot()
 netba  = NetBasedAnalysis()
 PLOTDEBUG = False
 FONTSIZE=16

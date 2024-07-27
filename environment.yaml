@@ -1,4 +1,4 @@
-name: analytics_env
+name: mrsitool_env
 channels:
   - conda-forge
   - defaults
@@ -33,3 +33,6 @@ dependencies:
       - PyQt6
       - scikit-tda
       - python-louvain
+      - umap-learn
+      - scikit-learn
+      - community

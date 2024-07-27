@@ -9,7 +9,7 @@ from graphplot.colorbar import ColorBar
 
 colorbar = ColorBar()
 
-class SimMatrix:
+class SimMatrixPlot:
     def __init__(self) -> None:
         pass
 

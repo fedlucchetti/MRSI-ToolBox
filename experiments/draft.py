@@ -2,7 +2,7 @@ import os, sys, copy,shutil
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import numpy as np
 
-from graphplot.simmatrix import SimMatrix
+from graphplot.simmatrix import SimMatrixPlot
 # from tqdm import tqdm
 from rich.progress import Progress,track
 from tools.progress_bar import ProgressBar
@@ -32,7 +32,7 @@ debug    = Debug()
 reg      = Registration()
 pb       = ProgressBar()
 parc     = Parcellate()
-simplt   = SimMatrix()
+simplt   = SimMatrixPlot()
 nba      = NetBasedAnalysis()
 ###############################################################################
 PLOTDEBUG = False

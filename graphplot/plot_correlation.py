@@ -74,7 +74,7 @@ slope, intercept, r, p, se = linregress(x_array, y_array)
 res = spearmanr(x_array, y_array)
 axs.plot(x_range, intercept + slope * x_range, 'k', linewidth=2, 
          label=fr"$\rho_{{XY}} = {round(res.statistic, 2)}$" + "\n" +
-               fr"$\rho_{{AGG}} = {round(corr_agg, 2)}$" + "\n" +
+            #    fr"$\rho_{{AGG}} = {round(corr_agg, 2)}$" + "\n" +
                fr"$\quad p = {round(res.pvalue, 5)}$")
 
 
